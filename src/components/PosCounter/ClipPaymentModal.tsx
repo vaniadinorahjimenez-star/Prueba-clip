@@ -311,7 +311,11 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
         
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#FF5A00] to-[#E04D00] p-5 text-white flex items-center justify-between relative shadow-xs">
+        <div className={`p-5 text-white flex items-center justify-between relative shadow-xs transition-colors ${
+          config.isTestMode
+            ? 'bg-gradient-to-r from-amber-600 to-amber-700'
+            : 'bg-gradient-to-r from-[#FF5A00] to-[#E04D00]'
+        }`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
               <CreditCard className="w-5 h-5 text-white" />
@@ -319,8 +323,10 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-base tracking-tight leading-tight">Terminal Clip Wi-Fi</h3>
-                <span className="text-[10px] bg-white/25 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                  En Vivo
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                  config.isTestMode ? 'bg-amber-300 text-amber-950 shadow-xs' : 'bg-white/25 text-white'
+                }`}>
+                  {config.isTestMode ? '🧪 MODO TEST' : '🟢 EN VIVO'}
                 </span>
               </div>
               <p className="text-xs text-orange-100 font-medium">
@@ -329,13 +335,34 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const nextMode = !config.isTestMode;
+                const updated = { ...config, isTestMode: nextMode };
+                setConfig(updated);
+                saveClipConfig(updated);
+                startClipTransaction();
+              }}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer border ${
+                config.isTestMode
+                  ? 'bg-white text-amber-900 border-white shadow-xs'
+                  : 'bg-white/20 hover:bg-white/30 text-white border-white/30'
+              }`}
+              title="Cambiar entre cobros reales y simulador de pruebas"
+            >
+              <span>{config.isTestMode ? '🧪 Modo Test' : '🟢 Real'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Resumen del cobro */}
@@ -438,6 +465,50 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
                   Terminal {config.serialNumber} Conectada
                 </div>
               </div>
+
+              {/* Controles interactivos cuando está en Modo Test */}
+              {config.isTestMode && (
+                <div className="w-full bg-amber-50 border border-amber-300 rounded-2xl p-3 space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-amber-950 flex items-center gap-1">
+                      <CreditCard className="w-3.5 h-3.5 text-amber-700" />
+                      Simulador de Tarjeta Test (Sin dinero real):
+                    </span>
+                    <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">
+                      Visa Test •• 4242
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onPaymentApproved({
+                          terminal: 'clip',
+                          authCode: `TEST-${Math.floor(100000 + Math.random() * 900000)}`,
+                          last4: '4242',
+                          reference: folio
+                        });
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-2.5 rounded-xl text-[11px] flex items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Aprobar Venta Test
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('BUSY_ERROR');
+                        setErrorMessage('Simulación Test: Tarjeta rechazada por fondos insuficientes (Prueba)');
+                      }}
+                      className="bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 font-bold py-2 px-2.5 rounded-xl text-[11px] flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                    >
+                      <X className="w-3.5 h-3.5 text-rose-600" />
+                      Simular Rechazo
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -557,6 +628,35 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* BOTÓN DIRECTO PARA ACTIVAR MODO PRUEBAS */}
+              <div className="w-full bg-amber-50 border-2 border-amber-400 rounded-2xl p-3.5 text-left space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-amber-700" />
+                    ¿Quieres cobrar en MODO TEST / PRUEBAS?
+                  </span>
+                  <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                    Sin dinero real
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-900 leading-relaxed">
+                  Puedes activar el <strong>Modo Test</strong> para realizar cobros simulados, probar el ticket, registrar ventas y capacitar personal usando tus claves de prueba sin necesidad de transferir dinero real.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = { ...config, isTestMode: true };
+                    setConfig(updated);
+                    saveClipConfig(updated);
+                    startClipTransaction();
+                  }}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-98"
+                >
+                  <CreditCard className="w-4 h-4 text-slate-950" />
+                  <span>🧪 Activar Modo Test y Cobrar ${amount.toFixed(2)} Ahora</span>
+                </button>
+              </div>
 
               {/* BOTÓN RÁPIDO PARA COBRAR EN MOSTRADOR SI EL CLIENTE ESTÁ ESPERANDO */}
               <button

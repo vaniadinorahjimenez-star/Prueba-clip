@@ -9,6 +9,7 @@ export interface ClipConfig {
   autoPrintReceipt?: boolean;
   apiKey?: string;       // API Key pública o token completo
   secretKey?: string;    // Clave secreta (Secret Key) de developer.clip.mx
+  isTestMode?: boolean;  // Modo de Pruebas / Sandbox (simula cobros sin dinero real para capacitación)
 }
 
 export type ClipErrorType = 
@@ -88,6 +89,11 @@ export function getStoredClipConfig(): ClipConfig {
         }
         if (!parsed.terminalName) {
           parsed.terminalName = DEFAULT_CLIP_ALIAS;
+          hasChanges = true;
+        }
+        if (parsed.isTestMode === undefined) {
+          // Si el usuario tiene una clave de prueba o explícitamente se quiere probar
+          parsed.isTestMode = false;
           hasChanges = true;
         }
         if (hasChanges) {
@@ -224,6 +230,24 @@ export async function sendPaymentToClipTerminal(
   const serial = cleanClipSerial(config.serialNumber);
   const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount)) || 0;
 
+  // 0. Si está activado el MODO PRUEBAS (TEST / SANDBOX)
+  if (config.isTestMode) {
+    await new Promise((r) => setTimeout(r, 600));
+    const testReqId = `test_req_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+    return {
+      success: true,
+      pinpadRequestId: testReqId,
+      httpStatus: 200,
+      details: {
+        id: testReqId,
+        amount: numAmount.toFixed(2),
+        reference,
+        mode: 'sandbox_test',
+        status: 'pending'
+      }
+    };
+  }
+
   // 1. Intentar el fetch directo a api.payclip.io conforme al snippet oficial
   try {
     const directResult = await executeClipPaymentFetch(numAmount, reference);
@@ -308,6 +332,34 @@ export async function pollClipPaymentStatus(
   maxAttempts: number = 36 // 36 intentos * 2.5s = ~90 segundos
 ): Promise<ClipPaymentResult> {
   const config = getStoredClipConfig();
+
+  // SIMULACIÓN REALISTA EN MODO PRUEBAS / SANDBOX
+  if (config.isTestMode || pinpadRequestId.startsWith('test_req_')) {
+    onStatusUpdate('Modo Pruebas: Conectando con simulador Clip...');
+    await new Promise((r) => setTimeout(r, 1000));
+    if (signal?.aborted) return { success: false, errorType: 'CANCELLED', message: 'Operación cancelada.' };
+
+    onStatusUpdate('Modo Pruebas: Esperando acercar tarjeta Visa Test...');
+    await new Promise((r) => setTimeout(r, 1500));
+    if (signal?.aborted) return { success: false, errorType: 'CANCELLED', message: 'Operación cancelada.' };
+
+    onStatusUpdate('Modo Pruebas: Tarjeta Visa Test (•••• 4242) detectada, verificando NIP...');
+    await new Promise((r) => setTimeout(r, 1200));
+    if (signal?.aborted) return { success: false, errorType: 'CANCELLED', message: 'Operación cancelada.' };
+
+    onStatusUpdate('Modo Pruebas: ¡Pago aprobado por el simulador!');
+    await new Promise((r) => setTimeout(r, 600));
+
+    return {
+      success: true,
+      status: 'APPROVED',
+      authCode: `TEST-${Math.floor(100000 + Math.random() * 900000)}`,
+      last4: '4242',
+      reference: config.serialNumber,
+      pinpadRequestId
+    };
+  }
+
   let attempts = 0;
 
   while (attempts < maxAttempts) {

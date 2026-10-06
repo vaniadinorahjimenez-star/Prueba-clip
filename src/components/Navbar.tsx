@@ -17,6 +17,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { Settings as SettingsType } from '../types';
+import { PWAInstallButton } from './PWAInstallButton';
 
 export type ActiveTabType = 'pos' | 'orders' | 'bakers' | 'analytics' | 'delivery' | 'loyalty' | 'history' | 'admin';
 
@@ -164,6 +165,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right: Desplegable Menu Button, Clock & Quick Controls */}
         <div className="flex items-center space-x-2 sm:space-x-3">
           
+          {/* Botón de Instalación App Android */}
+          <PWAInstallButton />
+
           {/* Main Desplegable Menu Button (Menú Desplegable Oculto) */}
           <div className="relative">
             <button

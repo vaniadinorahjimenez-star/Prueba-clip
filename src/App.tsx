@@ -49,6 +49,7 @@ import { LoyaltyManager } from './components/Loyalty/LoyaltyManager';
 import { SalesHistory } from './components/SalesHistory/SalesHistory';
 import { ProductionAnalytics } from './components/Analytics/ProductionAnalytics';
 import { AdminSettings } from './components/AdminSettings/AdminSettings';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { 
   syncWithCloud, 
   fetchAndMergeCloud, 
@@ -432,6 +433,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Indicador de estado de conexión PWA */}
+      <OfflineIndicator />
     </div>
   );
 }

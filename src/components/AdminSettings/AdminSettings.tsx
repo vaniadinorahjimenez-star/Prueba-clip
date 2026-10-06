@@ -1415,6 +1415,60 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               </div>
             </div>
 
+            {/* Selector de Modo: Producción vs Modo Pruebas */}
+            <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+              clipConfig.isTestMode
+                ? 'bg-amber-50 border-amber-300 text-amber-950'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <span className={`w-3 h-3 rounded-full ${clipConfig.isTestMode ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+                <div>
+                  <span className="font-extrabold text-sm block">
+                    Modo Activo: {clipConfig.isTestMode ? '🧪 MODO PRUEBAS / SANDBOX' : '🟢 MODO REAL / PRODUCCIÓN'}
+                  </span>
+                  <span className="text-xs text-slate-600 block">
+                    {clipConfig.isTestMode
+                      ? 'Simula cobros de tarjeta sin dinero real. Ideal para pruebas de tickets, caja y capacitación.'
+                      : 'Envía cobros reales con dinero bancario a tu terminal Clip física AA61B2325C0602412.'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = { ...clipConfig, isTestMode: false };
+                    setClipConfig(updated);
+                    saveClipConfig(updated);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    !clipConfig.isTestMode
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  🟢 Modo Real
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = { ...clipConfig, isTestMode: true };
+                    setClipConfig(updated);
+                    saveClipConfig(updated);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    clipConfig.isTestMode
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  🧪 Modo Pruebas
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
