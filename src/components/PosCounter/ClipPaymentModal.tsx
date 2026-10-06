@@ -26,7 +26,8 @@ import {
   diagnoseClipConnection,
   checkClipDeviceStatus,
   ClipPaymentResult,
-  DEFAULT_CLIP_SERIAL
+  DEFAULT_CLIP_SERIAL,
+  cleanClipSerial
 } from '../../services/clipService';
 
 interface ClipPaymentModalProps {
@@ -259,9 +260,11 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
   const handleSaveSerial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!serialInput.trim()) return;
-    const updated = { ...config, serialNumber: serialInput.trim() };
+    const sanitized = cleanClipSerial(serialInput);
+    const updated = { ...config, serialNumber: sanitized };
     setConfig(updated);
     saveClipConfig(updated);
+    setSerialInput(sanitized);
     setIsEditingSerial(false);
     startClipTransaction();
   };

@@ -23,6 +23,7 @@ import {
   DEFAULT_CLIP_SERIAL,
   DEFAULT_CLIP_API_KEY,
   DEFAULT_CLIP_SECRET_KEY,
+  cleanClipSerial,
   executeClipPaymentFetch 
 } from '../../services/clipService';
 
@@ -77,7 +78,7 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
       const endpoint = '/.netlify/functions/clip-payment';
       const requestPayload = {
         action: 'diagnose',
-        serial_number_pos: serial.trim() || DEFAULT_CLIP_SERIAL,
+        serial_number_pos: cleanClipSerial(serial),
         api_key: apiKey.trim() || undefined,
         secret_key: secretKey.trim() || undefined
       };
@@ -170,7 +171,7 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
   const handleSaveCredentialsLocally = () => {
     const updated = {
       ...storedConfig,
-      serialNumber: serial.trim() || DEFAULT_CLIP_SERIAL,
+      serialNumber: cleanClipSerial(serial),
       terminalName: terminalAlias.trim() || 'Clip Total 2',
       apiKey: apiKey.trim() || undefined,
       secretKey: secretKey.trim() || undefined

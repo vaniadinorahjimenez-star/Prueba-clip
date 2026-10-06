@@ -89,14 +89,17 @@ exports.handler = async (event) => {
       }
     }
 
-    const defaultApiKey = 'Basic dGVzdF9lNjY2ZWRkZS1hMmRiLTQwZTAtYjRjYS1kNmFkODM4OTcwNDM6ZTI3NzkzZmUtNjk0Ny00NWY5LTgwM2ItMjdkYTNiYWQ5OTRh';
+    const defaultApiKey = 'e666edde-a2db-40e0-b4ca-d6ad83897043';
     const defaultSecretKey = 'e27793fe-6947-45f9-803b-27da3bad994a';
     const defaultSerial = 'AA61B2325C0602412';
 
     // Obtenemos credenciales del payload del cliente o de variables de entorno de Netlify o credenciales oficiales
     const rawApiKey = payload.api_key || process.env.CLIP_API_KEY || process.env.CLIP_KEY || defaultApiKey;
     const rawSecretKey = payload.secret_key || process.env.CLIP_SECRET_KEY || process.env.CLIP_SECRET || defaultSecretKey;
-    const serialNumber = (payload.serial_number_pos || process.env.CLIP_TERMINAL_SERIAL || process.env.CLIP_SERIAL_NUMBER || defaultSerial).trim();
+    let rawSerial = (payload.serial_number_pos || process.env.CLIP_TERMINAL_SERIAL || process.env.CLIP_SERIAL_NUMBER || defaultSerial).trim();
+    if (rawSerial.toUpperCase().startsWith('SN:')) rawSerial = rawSerial.substring(3).trim();
+    else if (rawSerial.toUpperCase().startsWith('SN')) rawSerial = rawSerial.substring(2).trim();
+    const serialNumber = rawSerial;
     
     const authHeaderValue = buildClipAuthHeader(rawApiKey, rawSecretKey);
     const action = payload.action || event.queryStringParameters?.action || 'create_payment';

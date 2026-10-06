@@ -40,8 +40,23 @@ export interface ClipPaymentResult {
 const STORAGE_KEY = 'bakery_clip_terminal_config';
 export const DEFAULT_CLIP_SERIAL = 'AA61B2325C0602412';
 export const DEFAULT_CLIP_ALIAS = 'Clip Total 2';
-export const DEFAULT_CLIP_API_KEY = 'Basic dGVzdF9lNjY2ZWRkZS1hMmRiLTQwZTAtYjRjYS1kNmFkODM4OTcwNDM6ZTI3NzkzZmUtNjk0Ny00NWY5LTgwM2ItMjdkYTNiYWQ5OTRh';
+export const DEFAULT_CLIP_API_KEY = 'e666edde-a2db-40e0-b4ca-d6ad83897043';
 export const DEFAULT_CLIP_SECRET_KEY = 'e27793fe-6947-45f9-803b-27da3bad994a';
+
+/**
+ * Limpia y normaliza el número de serie de la terminal Clip,
+ * eliminando el prefijo "SN:" si el usuario lo copia de la etiqueta física de la terminal.
+ */
+export function cleanClipSerial(serial?: string): string {
+  if (!serial) return DEFAULT_CLIP_SERIAL;
+  let cleaned = serial.trim();
+  if (cleaned.toUpperCase().startsWith('SN:')) {
+    cleaned = cleaned.substring(3).trim();
+  } else if (cleaned.toUpperCase().startsWith('SN')) {
+    cleaned = cleaned.substring(2).trim();
+  }
+  return cleaned || DEFAULT_CLIP_SERIAL;
+}
 
 // Obtener configuración guardada de la terminal Clip en el navegador
 export function getStoredClipConfig(): ClipConfig {
@@ -52,11 +67,18 @@ export function getStoredClipConfig(): ClipConfig {
       if (parsed && typeof parsed === 'object') {
         // Asegurar que use la serie, alias y llaves oficiales
         let hasChanges = false;
+        if (parsed.serialNumber) {
+          const cleaned = cleanClipSerial(parsed.serialNumber);
+          if (cleaned !== parsed.serialNumber) {
+            parsed.serialNumber = cleaned;
+            hasChanges = true;
+          }
+        }
         if (!parsed.serialNumber || parsed.serialNumber === 'P8C2240805000156' || parsed.serialNumber === 'P8C22408050000156' || parsed.serialNumber === '08221800012345') {
           parsed.serialNumber = DEFAULT_CLIP_SERIAL;
           hasChanges = true;
         }
-        if (!parsed.apiKey || parsed.apiKey === 'a7c54f1f-9bea-4405-a128-83e8f18f9d32' || parsed.apiKey === 'test_e666edde-a2db-40e0-b4ca-d6ad83897043') {
+        if (!parsed.apiKey || parsed.apiKey === 'a7c54f1f-9bea-4405-a128-83e8f18f9d32' || parsed.apiKey === 'test_e666edde-a2db-40e0-b4ca-d6ad83897043' || parsed.apiKey.startsWith('Basic ')) {
           parsed.apiKey = DEFAULT_CLIP_API_KEY;
           hasChanges = true;
         }
@@ -95,7 +117,11 @@ export function getStoredClipConfig(): ClipConfig {
 export function saveClipConfig(config: Partial<ClipConfig>): void {
   try {
     const current = getStoredClipConfig();
-    const updated = { ...current, ...config };
+    const updated = { 
+      ...current, 
+      ...config,
+      serialNumber: cleanClipSerial(config.serialNumber || current.serialNumber)
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch (e) {
     console.error('Error al guardar configuración de Clip:', e);
@@ -116,7 +142,7 @@ export function saveClipConfig(config: Partial<ClipConfig>): void {
  */
 export async function executeClipPaymentFetch(amount: number, reference?: string): Promise<any> {
   const config = getStoredClipConfig();
-  const serial = config.serialNumber?.trim() || DEFAULT_CLIP_SERIAL;
+  const serial = cleanClipSerial(config.serialNumber);
   const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount)) || 0;
   const formattedAmount = numAmount.toFixed(2);
   const paymentRef = (reference || `PAN-${Date.now()}`).substring(0, 40);
@@ -195,7 +221,7 @@ export async function sendPaymentToClipTerminal(
   details?: any;
 }> {
   const config = getStoredClipConfig();
-  const serial = config.serialNumber?.trim() || DEFAULT_CLIP_SERIAL;
+  const serial = cleanClipSerial(config.serialNumber);
   const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount)) || 0;
 
   // 1. Intentar el fetch directo a api.payclip.io conforme al snippet oficial
@@ -374,7 +400,7 @@ export async function diagnoseClipConnection(serialNumber?: string): Promise<{
 }> {
   try {
     const config = getStoredClipConfig();
-    const serial = serialNumber || config.serialNumber || DEFAULT_CLIP_SERIAL;
+    const serial = cleanClipSerial(serialNumber || config.serialNumber);
 
     const response = await fetch('/.netlify/functions/clip-payment', {
       method: 'POST',
@@ -419,7 +445,7 @@ export async function checkClipDeviceStatus(serialNumber?: string): Promise<{
 }> {
   try {
     const config = getStoredClipConfig();
-    const serial = serialNumber || config.serialNumber || DEFAULT_CLIP_SERIAL;
+    const serial = cleanClipSerial(serialNumber || config.serialNumber);
 
     const response = await fetch('/.netlify/functions/clip-payment', {
       method: 'POST',

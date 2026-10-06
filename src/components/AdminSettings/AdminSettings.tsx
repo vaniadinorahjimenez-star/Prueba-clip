@@ -39,7 +39,7 @@ import { ClipDiagnosticTool } from './ClipDiagnosticTool';
 import { playBeep, playCashSound } from '../../utils/audio';
 import { printViaBluetooth, printViaUsbTypeB, printViaUsbSerial, printViaRawBtIntent } from '../../utils/thermalPrinter';
 import { getTodayString, getNowTimeString, loadDriverCustomers, saveDriverCustomers } from '../../utils/storage';
-import { getStoredClipConfig, saveClipConfig, diagnoseClipConnection, DEFAULT_CLIP_SERIAL } from '../../services/clipService';
+import { getStoredClipConfig, saveClipConfig, diagnoseClipConnection, DEFAULT_CLIP_SERIAL, cleanClipSerial } from '../../services/clipService';
 
 interface AdminSettingsProps {
   settings: Settings;
@@ -1424,7 +1424,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   type="text"
                   value={clipConfig.serialNumber}
                   onChange={(e) => {
-                    const updated = { ...clipConfig, serialNumber: e.target.value };
+                    const cleaned = cleanClipSerial(e.target.value);
+                    const updated = { ...clipConfig, serialNumber: cleaned };
                     setClipConfig(updated);
                     saveClipConfig(updated);
                   }}
