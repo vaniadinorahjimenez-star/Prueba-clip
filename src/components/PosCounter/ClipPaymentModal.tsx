@@ -165,7 +165,7 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
     abortControllerRef.current = controller;
 
     setStep('INITIATING');
-    setStatusMessage('Contactando a la terminal Clip P8C2240805000156 vía Wi-Fi...');
+    setStatusMessage(`Contactando a la terminal Clip ${config.serialNumber || DEFAULT_CLIP_SERIAL} vía Wi-Fi...`);
     setErrorMessage('');
     setErrorDetails(null);
     setHttpStatus(null);
@@ -379,7 +379,7 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
                 type="text"
                 value={serialInput}
                 onChange={(e) => setSerialInput(e.target.value)}
-                placeholder="P8C2240805000156"
+                placeholder={DEFAULT_CLIP_SERIAL}
                 className="flex-1 px-3 py-1.5 bg-white rounded-xl border border-slate-300 text-xs font-mono font-bold focus:ring-2 focus:ring-orange-500"
               />
               <button
@@ -901,7 +901,7 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
         <div className="bg-slate-50 border-t border-slate-200 px-5 py-3 flex items-center justify-between text-xs text-slate-500">
           <span className="text-[11px] font-medium flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-            Terminal Clip P8C2240805000156 • Wi-Fi Activo
+            Terminal Clip {config.serialNumber || DEFAULT_CLIP_SERIAL} • Wi-Fi Activo
           </span>
           <button
             type="button"

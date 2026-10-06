@@ -38,10 +38,10 @@ export interface ClipPaymentResult {
 }
 
 const STORAGE_KEY = 'bakery_clip_terminal_config';
-export const DEFAULT_CLIP_SERIAL = 'P8C2240805000156';
+export const DEFAULT_CLIP_SERIAL = 'AA61B2325C0602412';
 export const DEFAULT_CLIP_ALIAS = 'Clip Total 2';
-export const DEFAULT_CLIP_API_KEY = 'a7c54f1f-9bea-4405-a128-83e8f18f9d32';
-export const DEFAULT_CLIP_SECRET_KEY = '9d0167db-964e-459b-bada-b758d301f792';
+export const DEFAULT_CLIP_API_KEY = 'test_e666edde-a2db-40e0-b4ca-d6ad83897043';
+export const DEFAULT_CLIP_SECRET_KEY = 'e27793fe-6947-45f9-803b-27da3bad994a';
 
 // Obtener configuración guardada de la terminal Clip en el navegador
 export function getStoredClipConfig(): ClipConfig {
@@ -52,15 +52,15 @@ export function getStoredClipConfig(): ClipConfig {
       if (parsed && typeof parsed === 'object') {
         // Asegurar que use la serie, alias y llaves oficiales
         let hasChanges = false;
-        if (!parsed.serialNumber || parsed.serialNumber === 'P8C22408050000156' || parsed.serialNumber === '08221800012345') {
+        if (!parsed.serialNumber || parsed.serialNumber === 'P8C2240805000156' || parsed.serialNumber === 'P8C22408050000156' || parsed.serialNumber === '08221800012345') {
           parsed.serialNumber = DEFAULT_CLIP_SERIAL;
           hasChanges = true;
         }
-        if (!parsed.apiKey) {
+        if (!parsed.apiKey || parsed.apiKey === 'a7c54f1f-9bea-4405-a128-83e8f18f9d32') {
           parsed.apiKey = DEFAULT_CLIP_API_KEY;
           hasChanges = true;
         }
-        if (!parsed.secretKey) {
+        if (!parsed.secretKey || parsed.secretKey === '9d0167db-964e-459b-bada-b758d301f792') {
           parsed.secretKey = DEFAULT_CLIP_SECRET_KEY;
           hasChanges = true;
         }

@@ -17,9 +17,9 @@ const CORS_HEADERS = {
 };
 
 // Credenciales por defecto del comercio registradas para la terminal
-const DEFAULT_API_KEY = 'a7c54f1f-9bea-4405-a128-83e8f18f9d32';
-const DEFAULT_SECRET_KEY = '9d0167db-964e-459b-bada-b758d301f792';
-const DEFAULT_SERIAL = 'P8C2240805000156';
+const DEFAULT_API_KEY = 'test_e666edde-a2db-40e0-b4ca-d6ad83897043';
+const DEFAULT_SECRET_KEY = 'e27793fe-6947-45f9-803b-27da3bad994a';
+const DEFAULT_SERIAL = 'AA61B2325C0602412';
 
 /**
  * Genera el encabezado Authorization requerido por Clip:

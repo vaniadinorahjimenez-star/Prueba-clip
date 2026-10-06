@@ -21,6 +21,8 @@ import {
   getStoredClipConfig, 
   saveClipConfig, 
   DEFAULT_CLIP_SERIAL,
+  DEFAULT_CLIP_API_KEY,
+  DEFAULT_CLIP_SECRET_KEY,
   executeClipPaymentFetch 
 } from '../../services/clipService';
 
@@ -35,8 +37,8 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
 }) => {
   const [storedConfig, setStoredConfig] = useState(getStoredClipConfig());
   const [serial, setSerial] = useState<string>(storedConfig.serialNumber || DEFAULT_CLIP_SERIAL);
-  const [apiKey, setApiKey] = useState<string>(storedConfig.apiKey || 'a7c54f1f-9bea-4405-a128-83e8f18f9d32');
-  const [secretKey, setSecretKey] = useState<string>(storedConfig.secretKey || '9d0167db-964e-459b-bada-b758d301f792');
+  const [apiKey, setApiKey] = useState<string>(storedConfig.apiKey || DEFAULT_CLIP_API_KEY);
+  const [secretKey, setSecretKey] = useState<string>(storedConfig.secretKey || DEFAULT_CLIP_SECRET_KEY);
   const [terminalAlias, setTerminalAlias] = useState<string>(storedConfig.terminalName || 'Clip Total 2');
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -335,9 +337,9 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
                 type="button"
                 onClick={handleResetToDefaultSerial}
                 className="text-[10px] text-blue-600 hover:underline"
-                title="Restablecer P8C2240805000156"
+                title={`Restablecer ${DEFAULT_CLIP_SERIAL}`}
               >
-                P8C2240805000156
+                {DEFAULT_CLIP_SERIAL}
               </button>
             </div>
             <input
@@ -345,7 +347,7 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
               type="text"
               value={serial}
               onChange={(e) => setSerial(e.target.value)}
-              placeholder="P8C2240805000156"
+              placeholder={DEFAULT_CLIP_SERIAL}
               className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-mono font-bold focus:ring-2 focus:ring-orange-500"
             />
           </div>
@@ -443,7 +445,7 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
 
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
           <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
-            Terminal P8C2240805000156
+            Terminal {serial || DEFAULT_CLIP_SERIAL}
           </span>
           <div className="flex items-baseline gap-1 mt-1">
             <span className={`text-sm font-black ${parsedData?.is_serial_in_account ? 'text-emerald-600' : parsedData?.is_serial_in_account === false ? 'text-amber-600' : 'text-slate-500'}`}>

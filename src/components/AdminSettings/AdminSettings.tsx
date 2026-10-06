@@ -39,7 +39,7 @@ import { ClipDiagnosticTool } from './ClipDiagnosticTool';
 import { playBeep, playCashSound } from '../../utils/audio';
 import { printViaBluetooth, printViaUsbTypeB, printViaUsbSerial, printViaRawBtIntent } from '../../utils/thermalPrinter';
 import { getTodayString, getNowTimeString, loadDriverCustomers, saveDriverCustomers } from '../../utils/storage';
-import { getStoredClipConfig, saveClipConfig, diagnoseClipConnection } from '../../services/clipService';
+import { getStoredClipConfig, saveClipConfig, diagnoseClipConnection, DEFAULT_CLIP_SERIAL } from '../../services/clipService';
 
 interface AdminSettingsProps {
   settings: Settings;
@@ -507,7 +507,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
           }`}
         >
           <Terminal className="w-4 h-4 text-orange-500" />
-          <span>🔍 Diagnóstico Clip API (P8C2240805000156)</span>
+          <span>🔍 Diagnóstico Clip API ({clipConfig.serialNumber || DEFAULT_CLIP_SERIAL})</span>
         </button>
       </div>
 
@@ -1428,11 +1428,11 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                     setClipConfig(updated);
                     saveClipConfig(updated);
                   }}
-                  placeholder="P8C2240805000156"
+                  placeholder={DEFAULT_CLIP_SERIAL}
                   className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-300 font-mono text-xs font-bold focus:ring-2 focus:ring-orange-500"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Serie oficial: <strong>P8C2240805000156</strong>
+                  Serie oficial: <strong>{DEFAULT_CLIP_SERIAL}</strong>
                 </span>
               </div>
 
@@ -1636,10 +1636,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         </div>
       )}
 
-      {/* TAB: HERRAMIENTA DE DIAGNÓSTICO CLIP API (P8C2240805000156) */}
+      {/* TAB: HERRAMIENTA DE DIAGNÓSTICO CLIP API */}
       {activeTab === 'clip_diagnostic' && (
         <ClipDiagnosticTool
-          initialSerial="P8C2240805000156"
+          initialSerial={clipConfig.serialNumber || DEFAULT_CLIP_SERIAL}
           onConfigUpdated={() => setClipConfig(getStoredClipConfig())}
         />
       )}
