@@ -14,7 +14,9 @@ import {
   KeyRound,
   Activity,
   Power,
-  Check
+  Check,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { 
   getStoredClipConfig, 
@@ -514,39 +516,99 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
               <div className="text-center w-full">
                 <h4 className="font-black text-red-700 text-base">Error 401: Credenciales Rechazadas por Clip</h4>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Clip requiere tu <strong>API Key</strong> y tu <strong>Secret Key</strong> de producción.
+                  La API de terminales físicas de Clip requiere claves de <strong>PRODUCCIÓN</strong>.
                 </p>
               </div>
 
+              {/* AVISO DESTACADO SI TIENE CLAVE "test_" O TOKEN ENCODIFICADO CON "test_" */}
+              {(apiKeyInput.trim().toLowerCase().startsWith('test_') || 
+                apiKeyInput.includes('dGVzdF') || 
+                (config.apiKey || '').toLowerCase().startsWith('test_') || 
+                (config.apiKey || '').includes('dGVzdF')) && (
+                <div className="w-full bg-amber-50 border-2 border-amber-400 rounded-2xl p-3.5 space-y-2">
+                  <div className="flex items-center gap-1.5 font-black text-amber-950 text-xs">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Estás usando un Token de "Modo Pruebas" (contiene "test_")</span>
+                  </div>
+                  <p className="text-[11px] text-amber-900 leading-relaxed">
+                    Las terminales físicas Clip (serie <span className="font-mono font-bold">{config.serialNumber}</span>) operan en vivo con tarjetas reales y <strong>rechazan cualquier clave que provenga del ambiente de pruebas (Error 401)</strong>.
+                  </p>
+                  <div className="bg-white/90 rounded-xl p-3 border border-amber-200 text-[11px] text-slate-700 space-y-1.5 shadow-xs">
+                    <div className="font-bold text-slate-900 flex items-center justify-between">
+                      <span>Cómo obtener tu Token o Claves de Producción:</span>
+                      <a 
+                        href="https://developer.clip.mx" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#FF5A00] hover:underline font-bold flex items-center gap-1 text-[10px]"
+                      >
+                        developer.clip.mx <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <ol className="list-decimal pl-4 space-y-1 text-slate-700">
+                      <li>Inicia sesión en <strong>developer.clip.mx</strong>.</li>
+                      <li>En la parte superior, cambia de <strong>"Pruebas"</strong> a <strong>"Producción"</strong>.</li>
+                      <li>Ve a <strong>Credenciales API</strong> y copia tu <strong>API Key</strong> y <strong>Secret Key</strong> (o Token) de producción.</li>
+                      <li>Pégalas en los campos de abajo y presiona <strong>Guardar y Reintentar</strong>.</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              {/* BOTÓN RÁPIDO PARA COBRAR EN MOSTRADOR SI EL CLIENTE ESTÁ ESPERANDO */}
+              <button
+                type="button"
+                onClick={() => setStep('MANUAL_AUTH')}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-98"
+              >
+                <Check className="w-4 h-4" />
+                <span>⚡ Cobrar ${amount.toFixed(2)} en la Pantalla de la Terminal y Registrar Aquí</span>
+              </button>
+
               {/* Formulario rápido para corregir API Key y Secret Key */}
-              <form onSubmit={handleSaveCredentials} className="w-full bg-red-50/80 border border-red-200 rounded-2xl p-3.5 space-y-2.5 text-xs">
-                <div className="font-bold text-red-950 flex items-center justify-between">
-                  <span>Actualizar Credenciales de Clip:</span>
-                  <span className="text-[10px] text-red-700 font-normal">developer.clip.mx</span>
+              <form onSubmit={handleSaveCredentials} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 text-xs">
+                <div className="font-bold text-slate-800 flex items-center justify-between">
+                  <span>Ingresar Credenciales de Producción:</span>
+                  <a 
+                    href="https://developer.clip.mx" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#FF5A00] font-bold hover:underline flex items-center gap-0.5"
+                  >
+                    developer.clip.mx <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                    Token de Acceso o API Key:
+                    Token de Acceso o API Key (Producción):
                   </label>
                   <input
                     type="text"
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="Pega aquí tu Token o API Key"
-                    className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 font-mono text-xs focus:ring-2 focus:ring-[#FF5A00]"
+                    placeholder="Pega aquí tu API Key de Producción (sin test_)"
+                    className={`w-full bg-white border rounded-xl px-2.5 py-1.5 font-mono text-xs focus:ring-2 focus:ring-[#FF5A00] ${
+                      apiKeyInput.trim().toLowerCase().startsWith('test_') ? 'border-amber-400 bg-amber-50/40' : 'border-slate-300'
+                    }`}
                   />
+                  {apiKeyInput.trim().toLowerCase().startsWith('test_') && (
+                    <span className="text-[10px] text-amber-700 font-bold flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      Esta clave contiene "test_". Requiere clave de producción.
+                    </span>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                    Secret Key (opcional si pegaste el Token):
+                    Secret Key (Producción):
                   </label>
                   <input
                     type="password"
                     value={secretKeyInput}
                     onChange={(e) => setSecretKeyInput(e.target.value)}
-                    placeholder="Clave secreta (solo si no pegaste el token directo)"
+                    placeholder="Clave secreta de producción"
                     className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 font-mono text-xs focus:ring-2 focus:ring-[#FF5A00]"
                   />
                 </div>
@@ -554,7 +616,7 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
                 <div className="flex gap-2 pt-1">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#FF5A00] hover:bg-[#E04D00] text-white font-black py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    className="flex-1 bg-[#FF5A00] hover:bg-[#E04D00] text-white font-black py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-colors"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Guardar y Reintentar Cobro
@@ -562,22 +624,38 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
                 </div>
               </form>
 
-              <div className="grid grid-cols-2 gap-2 w-full pt-1">
+              <div className="grid grid-cols-3 gap-1.5 w-full pt-1">
                 <button
                   type="button"
                   onClick={runDiagnostic}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2 px-2 rounded-xl text-[11px] flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Activity className="w-3.5 h-3.5 text-orange-600" />
-                  Diagnóstico en Vivo
+                  Diagnóstico
                 </button>
                 <button
                   type="button"
                   onClick={() => setStep('MANUAL_AUTH')}
-                  className="bg-slate-800 hover:bg-slate-900 text-white font-black py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  className="bg-slate-800 hover:bg-slate-900 text-white font-black py-2 px-2 rounded-xl text-[11px] flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Autorizar Manual
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  Cobro Manual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPaymentApproved({
+                      terminal: 'clip',
+                      authCode: `TEST-${Math.floor(100000 + Math.random() * 900000)}`,
+                      last4: '0000',
+                      reference: folio
+                    });
+                  }}
+                  className="bg-amber-100 hover:bg-amber-200 text-amber-900 font-black py-2 px-2 rounded-xl text-[11px] flex items-center justify-center gap-1 shadow-xs cursor-pointer border border-amber-300"
+                  title="Simula un pago aprobado para probar el punto de venta sin cobro bancario real"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
+                  Simular Prueba
                 </button>
               </div>
             </div>

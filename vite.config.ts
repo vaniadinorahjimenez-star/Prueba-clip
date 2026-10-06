@@ -28,7 +28,7 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
                 try { payload = JSON.parse(bodyStr); } catch (e) {}
               }
 
-              const defaultApiKey = 'test_e666edde-a2db-40e0-b4ca-d6ad83897043';
+              const defaultApiKey = 'Basic dGVzdF9lNjY2ZWRkZS1hMmRiLTQwZTAtYjRjYS1kNmFkODM4OTcwNDM6ZTI3NzkzZmUtNjk0Ny00NWY5LTgwM2ItMjdkYTNiYWQ5OTRh';
               const defaultSecretKey = 'e27793fe-6947-45f9-803b-27da3bad994a';
               const defaultSerial = 'AA61B2325C0602412';
 
@@ -221,7 +221,13 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
                 else if (clipRes.status === 409) errCode = 'TERMINAL_BUSY';
 
                 let customMessage = rawMsg || `Clip API devolvió error HTTP ${clipRes.status}`;
-                if (errCode === 'PINPAD_APP_CLOSED') {
+                if (errCode === 'CLIP_AUTH_ERROR') {
+                  if ((apiKey || '').startsWith('test_')) {
+                    customMessage = 'Clip rechazó las credenciales (Error 401) porque la API Key tiene el prefijo "test_". Las terminales físicas Clip requieren credenciales de PRODUCCIÓN generadas en developer.clip.mx (sin el prefijo test_).';
+                  } else {
+                    customMessage = 'Error 401: Clave no reconocida por Clip. Verifica tu API Key y Secret Key de Producción en developer.clip.mx.';
+                  }
+                } else if (errCode === 'PINPAD_APP_CLOSED') {
                   customMessage = `La aplicación Clip PinPad en la terminal ${serial} está cerrada o en reposo (ERR10_04). Abre la app Clip PinPad en la pantalla de la terminal para activarla.`;
                 } else if (errCode === 'PINPAD_APP_NOT_LISTENING') {
                   customMessage = `Tu terminal Clip ${serial} está activa en línea, pero la aplicación de integración PinPad aún no recibe órdenes automáticas (Código ERR10_03). Abre la app Clip PinPad en la terminal o usa Cobro Directo mientras tanto.`;

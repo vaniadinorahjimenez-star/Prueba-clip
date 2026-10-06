@@ -89,7 +89,7 @@ exports.handler = async (event) => {
       }
     }
 
-    const defaultApiKey = 'test_e666edde-a2db-40e0-b4ca-d6ad83897043';
+    const defaultApiKey = 'Basic dGVzdF9lNjY2ZWRkZS1hMmRiLTQwZTAtYjRjYS1kNmFkODM4OTcwNDM6ZTI3NzkzZmUtNjk0Ny00NWY5LTgwM2ItMjdkYTNiYWQ5OTRh';
     const defaultSecretKey = 'e27793fe-6947-45f9-803b-27da3bad994a';
     const defaultSerial = 'AA61B2325C0602412';
 
@@ -378,13 +378,16 @@ exports.handler = async (event) => {
 
           // 1. Error de Autenticación 401
           if (response.status === 401 || response.status === 403 || lowerMsg.includes('unauthorized') || rawCode === 'UNAUTHORIZED') {
+            const isTestKey = (rawApiKey || '').startsWith('test_');
             return {
               statusCode: 401,
               headers: CORS_HEADERS,
               body: JSON.stringify({
                 error: 'CLIP_AUTH_ERROR',
                 http_status: response.status,
-                message: 'Error de Autenticación (401): Tu clave API o Clave Secreta no fue aceptada por Clip. Verifica en developer.clip.mx tus credenciales de Producción.',
+                message: isTestKey 
+                  ? 'Clip rechazó las credenciales (Error 401) porque la API Key tiene el prefijo "test_". Las terminales físicas Clip requieren credenciales de PRODUCCIÓN generadas en developer.clip.mx (sin el prefijo test_).'
+                  : 'Error de Autenticación (401): Tu clave API o Clave Secreta no fue aceptada por Clip. Verifica en developer.clip.mx tus credenciales de Producción.',
                 details: responseData
               })
             };

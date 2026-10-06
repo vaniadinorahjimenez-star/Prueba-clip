@@ -40,7 +40,7 @@ export interface ClipPaymentResult {
 const STORAGE_KEY = 'bakery_clip_terminal_config';
 export const DEFAULT_CLIP_SERIAL = 'AA61B2325C0602412';
 export const DEFAULT_CLIP_ALIAS = 'Clip Total 2';
-export const DEFAULT_CLIP_API_KEY = 'test_e666edde-a2db-40e0-b4ca-d6ad83897043';
+export const DEFAULT_CLIP_API_KEY = 'Basic dGVzdF9lNjY2ZWRkZS1hMmRiLTQwZTAtYjRjYS1kNmFkODM4OTcwNDM6ZTI3NzkzZmUtNjk0Ny00NWY5LTgwM2ItMjdkYTNiYWQ5OTRh';
 export const DEFAULT_CLIP_SECRET_KEY = 'e27793fe-6947-45f9-803b-27da3bad994a';
 
 // Obtener configuración guardada de la terminal Clip en el navegador
@@ -56,7 +56,7 @@ export function getStoredClipConfig(): ClipConfig {
           parsed.serialNumber = DEFAULT_CLIP_SERIAL;
           hasChanges = true;
         }
-        if (!parsed.apiKey || parsed.apiKey === 'a7c54f1f-9bea-4405-a128-83e8f18f9d32') {
+        if (!parsed.apiKey || parsed.apiKey === 'a7c54f1f-9bea-4405-a128-83e8f18f9d32' || parsed.apiKey === 'test_e666edde-a2db-40e0-b4ca-d6ad83897043') {
           parsed.apiKey = DEFAULT_CLIP_API_KEY;
           hasChanges = true;
         }

@@ -17,7 +17,7 @@ const CORS_HEADERS = {
 };
 
 // Credenciales por defecto del comercio registradas para la terminal
-const DEFAULT_API_KEY = 'test_e666edde-a2db-40e0-b4ca-d6ad83897043';
+const DEFAULT_API_KEY = 'Basic dGVzdF9lNjY2ZWRkZS1hMmRiLTQwZTAtYjRjYS1kNmFkODM4OTcwNDM6ZTI3NzkzZmUtNjk0Ny00NWY5LTgwM2ItMjdkYTNiYWQ5OTRh';
 const DEFAULT_SECRET_KEY = 'e27793fe-6947-45f9-803b-27da3bad994a';
 const DEFAULT_SERIAL = 'AA61B2325C0602412';
 

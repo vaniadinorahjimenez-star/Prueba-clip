@@ -506,7 +506,9 @@ export const ClipDiagnosticTool: React.FC<ClipDiagnosticToolProps> = ({
               {parsedData?.clip_http_status === 200
                 ? 'Aceptada (HTTP 200 OK)'
                 : parsedData?.clip_http_status === 401
-                ? 'Rechazada por Clip (HTTP 401 Unauthorized)'
+                ? (apiKey.toLowerCase().startsWith('test_') || apiKey.includes('dGVzdF')
+                    ? 'Rechazada: Token con claves de pruebas ("test_"). Las terminales requieren claves de Producción en developer.clip.mx'
+                    : 'Rechazada por Clip (HTTP 401 Unauthorized)')
                 : 'Pendiente de prueba'}
             </span>
           </div>

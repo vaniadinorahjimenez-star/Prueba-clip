@@ -1468,12 +1468,20 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                     setClipConfig(updated);
                     saveClipConfig(updated);
                   }}
-                  placeholder="Pega aquí tu Token de acceso directo o tu API Key"
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-orange-500"
+                  placeholder="Pega aquí tu API Key de Producción (sin test_)"
+                  className={`w-full px-3 py-2 bg-slate-50 rounded-xl border font-mono text-xs focus:ring-2 focus:ring-orange-500 ${
+                    clipConfig.apiKey?.trim().toLowerCase().startsWith('test_') ? 'border-amber-400 bg-amber-50/30' : 'border-slate-300'
+                  }`}
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Pega aquí tu Token de acceso directo ("TU_TOKEN_DE_ACCESO") o tu API Key.
-                </span>
+                {clipConfig.apiKey?.trim().toLowerCase().startsWith('test_') ? (
+                  <span className="text-[10px] text-amber-700 font-bold block mt-1">
+                    ⚠️ Esta clave tiene el prefijo "test_". Para terminales físicas Clip, genera tus claves en la sección "Producción" de developer.clip.mx.
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Pega aquí tu API Key de Producción de developer.clip.mx (sin prefijo test_).
+                  </span>
+                )}
               </div>
 
               <div>
