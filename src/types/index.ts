@@ -53,7 +53,7 @@ export interface SaleTicket {
   discount: number;
   total: number;
   paymentMethod: 'efectivo' | 'tarjeta';
-  cardTerminal?: 'zettle' | 'clip' | 'terminal_bancaria' | 'otro';
+  cardTerminal?: 'zettle' | 'clip' | 'mercadopago' | 'terminal_bancaria' | 'otro';
   cardAuthCode?: string;
   cardReference?: string;
   cardLast4?: string;

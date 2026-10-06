@@ -890,7 +890,7 @@ export const PosCounter: React.FC<PosCounterProps> = ({
 
   // Process & Complete Sale with Card Terminal (Clip Wi-Fi API or PayPal POS Zettle)
   const handleCardCheckout = (cardDetails: {
-    terminal: 'clip' | 'zettle';
+    terminal: 'clip' | 'zettle' | 'mercadopago';
     authCode: string;
     last4?: string;
     reference?: string;

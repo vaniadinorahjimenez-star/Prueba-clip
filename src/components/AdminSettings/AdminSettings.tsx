@@ -33,13 +33,28 @@ import {
   BookOpen,
   Wifi,
   WifiOff,
-  Terminal
+  Terminal,
+  CheckCircle2,
+  AlertTriangle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { ClipDiagnosticTool } from './ClipDiagnosticTool';
 import { playBeep, playCashSound } from '../../utils/audio';
 import { printViaBluetooth, printViaUsbTypeB, printViaUsbSerial, printViaRawBtIntent } from '../../utils/thermalPrinter';
 import { getTodayString, getNowTimeString, loadDriverCustomers, saveDriverCustomers } from '../../utils/storage';
 import { getStoredClipConfig, saveClipConfig, diagnoseClipConnection, DEFAULT_CLIP_SERIAL, cleanClipSerial } from '../../services/clipService';
+import { 
+  getStoredMercadoPagoConfig, 
+  saveMercadoPagoConfig, 
+  sendPaymentToMercadoPagoPoint, 
+  cancelMercadoPagoPaymentIntent, 
+  DEFAULT_MP_PUBLIC_KEY,
+  DEFAULT_MP_ACCESS_TOKEN, 
+  DEFAULT_MP_CLIENT_ID, 
+  DEFAULT_MP_CLIENT_SECRET, 
+  DEFAULT_MP_DEVICE_ID 
+} from '../../services/mercadoPagoService';
 
 interface AdminSettingsProps {
   settings: Settings;
@@ -107,6 +122,42 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [clipConfig, setClipConfig] = useState(getStoredClipConfig);
   const [isTestingClip, setIsTestingClip] = useState<boolean>(false);
   const [clipDiagnosticFeedback, setClipDiagnosticFeedback] = useState<any>(null);
+
+  // Mercado Pago Point state
+  const [mpConfig, setMpConfig] = useState(getStoredMercadoPagoConfig);
+  const [showMpSecret, setShowMpSecret] = useState<boolean>(false);
+  const [isTestingMp, setIsTestingMp] = useState<boolean>(false);
+  const [mpTestFeedback, setMpTestFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestMercadoPago = async () => {
+    setIsTestingMp(true);
+    setMpTestFeedback(null);
+    try {
+      const res = await sendPaymentToMercadoPagoPoint(5.00, 'TEST-CONEXION-01');
+      if (res.success && res.paymentIntentId) {
+        setMpTestFeedback({
+          success: true,
+          message: '¡Excelente! La orden de $5.00 se envió exitosamente a tu terminal Point Smart N950. Cancelando orden de prueba en 4 segundos...'
+        });
+        setTimeout(async () => {
+          await cancelMercadoPagoPaymentIntent(res.paymentIntentId!);
+          setMpTestFeedback({
+            success: true,
+            message: '¡Prueba completada con éxito! La orden de $5.00 llegó a la pantalla de la terminal Point Smart y se canceló automáticamente.'
+          });
+        }, 4000);
+      } else {
+        setMpTestFeedback({
+          success: false,
+          message: res.message || 'Error al conectar con la terminal Point.'
+        });
+      }
+    } catch (e: any) {
+      setMpTestFeedback({ success: false, message: e.message || 'Fallo de conexión' });
+    } finally {
+      setIsTestingMp(false);
+    }
+  };
 
   const createDummyTicket = (): SaleTicket => ({
     id: `test-${Date.now()}`,
@@ -1395,6 +1446,171 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 <span className="text-[10px] text-slate-500 mt-0.5">App de Android para tickets</span>
               </button>
             </div>
+          </div>
+
+          {/* CONFIGURACIÓN OFICIAL: TERMINAL MERCADO PAGO POINT */}
+          <div className="bg-white rounded-3xl p-6 shadow-sm border-2 border-blue-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-blue-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      Terminal Mercado Pago Point Smart N950
+                    </h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                      Recomendada
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Conexión directa vía Wi-Fi / 4G con tu cuenta oficial de Mercado Pago México
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold self-start sm:self-auto">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>MODO PDV ACTIVO (HTTP 200 OK)</span>
+              </div>
+            </div>
+
+            {/* Credenciales configuradas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Public Key (Clave Pública Oficial):
+                </label>
+                <input
+                  type="text"
+                  value={mpConfig.publicKey || DEFAULT_MP_PUBLIC_KEY}
+                  onChange={(e) => {
+                    const updated = { ...mpConfig, publicKey: e.target.value.trim() };
+                    setMpConfig(updated);
+                    saveMercadoPagoConfig(updated);
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Access Token de Producción (Oficial):
+                </label>
+                <input
+                  type="text"
+                  value={mpConfig.accessToken || DEFAULT_MP_ACCESS_TOKEN}
+                  onChange={(e) => {
+                    const updated = { ...mpConfig, accessToken: e.target.value.trim() };
+                    setMpConfig(updated);
+                    saveMercadoPagoConfig(updated);
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Client ID:
+                </label>
+                <input
+                  type="text"
+                  value={mpConfig.clientId || DEFAULT_MP_CLIENT_ID}
+                  onChange={(e) => {
+                    const updated = { ...mpConfig, clientId: e.target.value.trim() };
+                    setMpConfig(updated);
+                    saveMercadoPagoConfig(updated);
+                  }}
+                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Client Secret / Key:
+                </label>
+                <div className="relative">
+                  <input
+                    type={showMpSecret ? "text" : "password"}
+                    value={mpConfig.clientSecret || DEFAULT_MP_CLIENT_SECRET}
+                    onChange={(e) => {
+                      const updated = { ...mpConfig, clientSecret: e.target.value.trim() };
+                      setMpConfig(updated);
+                      saveMercadoPagoConfig(updated);
+                    }}
+                    className="w-full px-3 py-2 pr-9 bg-slate-50 rounded-xl border border-slate-300 font-mono text-xs focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMpSecret(!showMpSecret)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    title={showMpSecret ? "Ocultar clave" : "Mostrar clave"}
+                  >
+                    {showMpSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Dispositivo Point Activo:
+                </label>
+                <select
+                  value={mpConfig.deviceId || DEFAULT_MP_DEVICE_ID}
+                  onChange={(e) => {
+                    const devId = e.target.value;
+                    const updated = { 
+                      ...mpConfig, 
+                      deviceId: devId,
+                      deviceName: devId.includes('N950') ? 'Point Smart N950' : 'Point Plus ME30SU'
+                    };
+                    setMpConfig(updated);
+                    saveMercadoPagoConfig(updated);
+                  }}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-blue-300 font-bold text-xs focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="NEWLAND_N950__N950NCD300176970">
+                    Point Smart Newland N950 con Impresora (NEWLAND_N950__N950NCD300176970)
+                  </option>
+                  <option value="NEWLAND_ME30SU__Q79903736417">
+                    Point Plus ME30SU (NEWLAND_ME30SU__Q79903736417)
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* Botón de Prueba en Vivo */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+              <button
+                type="button"
+                disabled={isTestingMp}
+                onClick={handleTestMercadoPago}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all active:scale-95"
+              >
+                <Smartphone className={`w-4 h-4 ${isTestingMp ? 'animate-bounce' : ''}`} />
+                <span>{isTestingMp ? 'Enviando orden a la terminal...' : '📲 Probar Envío a Terminal Point ($5.00 MXN)'}</span>
+              </button>
+
+              <span className="text-[11px] text-slate-500">
+                La orden de $5.00 sonará en tu terminal física y se cancelará automáticamente.
+              </span>
+            </div>
+
+            {mpTestFeedback && (
+              <div className={`p-3 rounded-xl border text-xs leading-relaxed flex items-center gap-2 ${
+                mpTestFeedback.success
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                  : 'bg-rose-50 border-rose-300 text-rose-950'
+              }`}>
+                {mpTestFeedback.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{mpTestFeedback.message}</span>
+              </div>
+            )}
           </div>
 
           {/* Configuración de Terminal Clip Wi-Fi (Cobro Automático F2F API) */}

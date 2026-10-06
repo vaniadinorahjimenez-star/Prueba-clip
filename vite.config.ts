@@ -405,6 +405,103 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
             });
             return;
           }
+
+          // -------------------------------------------------------------------
+          // PROXY MERCADO PAGO POINT (Credenciales Oficiales)
+          // -------------------------------------------------------------------
+          if (req.url && req.url.startsWith('/.netlify/functions/mercadopago-point')) {
+            const headers = {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS'
+            };
+            if (req.method === 'OPTIONS') {
+              res.writeHead(204, headers);
+              return res.end();
+            }
+
+            let bodyStr = '';
+            req.on('data', chunk => { bodyStr += chunk; });
+            req.on('end', async () => {
+              try {
+                let payload: any = {};
+                try { payload = JSON.parse(bodyStr); } catch {}
+                const urlObj = new URL(req.url, 'http://localhost');
+                const action = payload.action || urlObj.searchParams.get('action') || 'create_payment_intent';
+                const token = payload.access_token || urlObj.searchParams.get('access_token') || 'APP_USR-1851444305390229-100618-87c98c73cf6f06ebc4d3108482bb5e53-264153036';
+                const authHeader = `Bearer ${token.trim()}`;
+
+                if (action === 'list_devices') {
+                  const mpRes = await fetch('https://api.mercadopago.com/point/integration-api/devices', {
+                    headers: { 'Authorization': authHeader }
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                if (action === 'change_mode') {
+                  const deviceId = payload.device_id || 'NEWLAND_N950__N950NCD300176970';
+                  const mode = payload.operating_mode || 'PDV';
+                  const mpRes = await fetch(`https://api.mercadopago.com/point/integration-api/devices/${deviceId}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ operating_mode: mode })
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                if (action === 'create_payment_intent') {
+                  const deviceId = payload.device_id || 'NEWLAND_N950__N950NCD300176970';
+                  const amount = Number(payload.amount);
+                  const reference = payload.reference || `PAN-${Date.now()}`;
+                  const mpRes = await fetch(`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      amount: amount,
+                      additional_info: { external_reference: reference, print_on_terminal: true }
+                    })
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                if (action === 'get_status') {
+                  const intentId = payload.payment_intent_id || urlObj.searchParams.get('payment_intent_id');
+                  const mpRes = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`, {
+                    headers: { 'Authorization': authHeader }
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                if (action === 'cancel_payment_intent') {
+                  const deviceId = payload.device_id || 'NEWLAND_N950__N950NCD300176970';
+                  const intentId = payload.payment_intent_id;
+                  const mpRes = await fetch(`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents/${intentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': authHeader }
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                res.writeHead(400, headers);
+                return res.end(JSON.stringify({ error: 'UNKNOWN_ACTION' }));
+              } catch (e: any) {
+                res.writeHead(500, headers);
+                return res.end(JSON.stringify({ error: e.message }));
+              }
+            });
+            return;
+          }
         }
         next();
       });
