@@ -14,12 +14,12 @@ import {
   ChevronDown,
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  BookOpen
 } from 'lucide-react';
 import { Settings as SettingsType } from '../types';
-import { PWAInstallButton } from './PWAInstallButton';
 
-export type ActiveTabType = 'pos' | 'orders' | 'bakers' | 'analytics' | 'delivery' | 'loyalty' | 'history' | 'admin';
+export type ActiveTabType = 'pos' | 'orders' | 'bakers' | 'analytics' | 'recipes' | 'delivery' | 'loyalty' | 'history' | 'admin';
 
 interface NavbarProps {
   activeTab: ActiveTabType;
@@ -91,6 +91,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       icon: TrendingUp,
       emoji: '📈',
       description: 'Charolas de bolillo y demanda'
+    },
+    {
+      id: 'recipes' as ActiveTabType,
+      label: 'Recetario Maestro',
+      shortLabel: 'Recetario',
+      icon: BookOpen,
+      emoji: '📖',
+      description: 'Fórmulas y recuadro para foto del pan'
     },
     {
       id: 'loyalty' as ActiveTabType,
@@ -165,9 +173,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right: Desplegable Menu Button, Clock & Quick Controls */}
         <div className="flex items-center space-x-2 sm:space-x-3">
           
-          {/* Botón de Instalación App Android */}
-          <PWAInstallButton />
-
           {/* Main Desplegable Menu Button (Menú Desplegable Oculto) */}
           <div className="relative">
             <button

@@ -613,20 +613,30 @@ export const BakersWorkshop: React.FC<BakersWorkshopProps> = ({
           {/* TOP MASTER PROGRESS BAR & SUMMARY */}
           <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border-2 border-[#E5E1DA] space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              {/* Title & Priority Explanation */}
-              <div className="space-y-1">
+              {/* Title & Quick Numbers */}
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <span className="bg-amber-100 text-amber-950 font-black text-xs px-3 py-1 rounded-xl border border-amber-300 flex items-center gap-1.5">
-                    <span>🥐😊</span>
-                    <span>Lista de Producción y Control</span>
+                    <span>🥐</span>
+                    <span>Producción y Horneado</span>
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                    Avance Total de Horneado
+                    Avance de Producción
                   </h2>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-600">
-                  Prioridad obligatoria: <strong className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded font-black">🥇 1. Pide y Recoge</strong> ➔ <strong className="text-blue-800 bg-blue-100 px-2 py-0.5 rounded font-black">🥈 2. Reparto</strong> ➔ <strong className="text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded font-black">🥉 3. Venta en Tienda</strong>.
-                </p>
+                
+                {/* Métricas rápidas numéricas */}
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <span className="bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-lg text-xs font-black border border-purple-200">
+                    1. Pide y Recoge: <strong>{relevantOrders.filter(o => o.orderChannel === 'recoger_tienda' || o.origin === 'pide_recoge').length}</strong>
+                  </span>
+                  <span className="bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-lg text-xs font-black border border-blue-200">
+                    2. Repartos: <strong>{relevantOrders.filter(o => o.deliveryType === 'reparto' || o.deliveryType === 'domicilio' || o.orderChannel === 'reparto').length}</strong>
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-lg text-xs font-black border border-emerald-200">
+                    3. Tienda: <strong>{relevantOrders.filter(o => o.orderChannel === 'venta_tienda' || (o.deliveryType === 'tienda' && o.origin !== 'pide_recoge')).length}</strong>
+                  </span>
+                </div>
               </div>
 
               {/* Date Filters: Hoy | Mañana | Todos */}

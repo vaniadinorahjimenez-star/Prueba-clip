@@ -460,30 +460,42 @@ export const ClipPaymentModal: React.FC<ClipPaymentModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 w-full pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('MANUAL_AUTH')}
-                  className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  Autorizar Manual
-                </button>
+              <div className="flex flex-col gap-2 w-full pt-2">
                 <button
                   type="button"
                   onClick={() => {
+                    const confirmedAuth = authCode || `MP-${Date.now().toString().slice(-6)}`;
                     onPaymentApproved({
                       terminal: provider,
-                      authCode: `APPR-${Math.floor(100000 + Math.random() * 900000)}`,
-                      last4: '0000',
+                      authCode: confirmedAuth,
+                      last4: last4 || '••••',
                       reference: folio
                     });
                   }}
-                  className="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer border border-amber-300"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-95 transition-all"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
-                  Simular Prueba
+                  <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                  <span>✅ Ya Cobró la Terminal - Registrar Cobro en Pantalla</span>
                 </button>
+
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setStep('MANUAL_AUTH')}
+                    className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    Autorizar Manual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startTransaction(provider)}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                    Reconsultar Estatus
+                  </button>
+                </div>
               </div>
             </div>
           )}

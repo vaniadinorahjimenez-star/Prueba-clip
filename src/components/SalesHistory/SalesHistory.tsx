@@ -77,8 +77,7 @@ export function parseTimeToMinutes(timeStr: string): number {
 }
 
 // Turno 1: 06:50 AM (410 mins) a 15:00 HRS (900 mins)
-// Turno 2: 15:01 HRS (901 mins) a 22:10 HRS (1330 mins)
-// Or manually assigned shift if cashier switched earlier
+// Turno 2: 15:01 HRS (901 mins) a 23:59 HRS (1439 mins) - Mostrador continuo hasta las 11:59 PM
 export function getTicketShift(ticketOrTime: string | { shift?: 'turno1' | 'turno2'; time: string }): 'turno1' | 'turno2' {
   if (typeof ticketOrTime === 'string') {
     return resolveTicketShift({ time: ticketOrTime });
@@ -97,7 +96,7 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
 }) => {
   const todayStr = getTodayString();
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
-  const [dateFilterMode, setDateFilterMode] = useState<'hoy' | 'ayer' | 'semana' | 'personalizado'>('hoy');
+  const [dateFilterMode, setDateFilterMode] = useState<'hoy' | 'ayer' | 'semana' | 'mes' | 'personalizado'>('hoy');
   
   // Sub-Navigation Module in Historial de Caja
   // 'corte_caja' (Mostrador / Turnos) | 'repartos' (Reparto y choferes) | 'pedidos_tienda' (Recoger en tienda) | 'por_cobrar' (Montos pendientes por cobrar)
@@ -151,20 +150,40 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
     }
   };
 
-  // Compute yesterday string
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  // Helper to format date YYYY-MM-DD en hora local del dispositivo (evita desfase UTC nocturno)
+  const formatLocalDate = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
-  // Compute 7 days ago
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayStr = formatLocalDate(yesterday);
 
-  // Helper para resolver la fecha del ticket de forma infalible
+  // Lunes de la semana en curso (Semana Actual)
+  const currentDayOfWeek = now.getDay();
+  const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+  const mondayDate = new Date(now);
+  mondayDate.setDate(now.getDate() + diffToMonday);
+  const weekStartStr = formatLocalDate(mondayDate);
+
+  // Día 1 del mes en curso (Mes Actual)
+  const monthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStartStr = formatLocalDate(monthStartDate);
+
+  // Helper para resolver la fecha del ticket de forma infalible en tiempo local (evita descalce después de las 22:00)
   const getTicketDate = (t: SaleTicket): string => {
     if (t.date && typeof t.date === 'string' && t.date.trim()) return t.date.trim();
-    if (t.timestamp && typeof t.timestamp === 'string') return t.timestamp.split('T')[0];
+    if (t.timestamp && typeof t.timestamp === 'string') {
+      try {
+        const d = new Date(t.timestamp);
+        if (!isNaN(d.getTime())) return formatLocalDate(d);
+      } catch {}
+      return t.timestamp.split('T')[0];
+    }
     return todayStr;
   };
 
@@ -173,7 +192,8 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
     const tDate = getTicketDate(ticket);
     if (dateFilterMode === 'hoy' && tDate !== todayStr) return false;
     if (dateFilterMode === 'ayer' && tDate !== yesterdayStr) return false;
-    if (dateFilterMode === 'semana' && tDate < sevenDaysAgoStr) return false;
+    if (dateFilterMode === 'semana' && (tDate < weekStartStr || tDate > todayStr)) return false;
+    if (dateFilterMode === 'mes' && (tDate < monthStartStr || tDate > todayStr)) return false;
     if (dateFilterMode === 'personalizado' && tDate !== selectedDate) return false;
     return true;
   });
@@ -183,7 +203,8 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
     const orderDate = order.deliveryDate || (order.createdAt ? order.createdAt.split('T')[0] : todayStr);
     if (dateFilterMode === 'hoy' && orderDate !== todayStr) return false;
     if (dateFilterMode === 'ayer' && orderDate !== yesterdayStr) return false;
-    if (dateFilterMode === 'semana' && orderDate < sevenDaysAgoStr) return false;
+    if (dateFilterMode === 'semana' && (orderDate < weekStartStr || orderDate > todayStr)) return false;
+    if (dateFilterMode === 'mes' && (orderDate < monthStartStr || orderDate > todayStr)) return false;
     if (dateFilterMode === 'personalizado' && orderDate !== selectedDate) return false;
     return true;
   });
@@ -277,6 +298,48 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
   // Gran Total de Ventas Globales (Mostrador + Repartos + Pedidos Tienda)
   const grandTotalSales = mostradorTotal + deliveryTotalGenerated + storeOrdersTotalGenerated;
   const grandTotalCollectedCashAndCard = mostradorTotal + deliveryTotalCollected + storeOrdersTotalCollected;
+
+  // --- RESUMEN DE VENTAS ACUMULADAS POR SEMANA (Lunes a Domingo) ---
+  const weekTickets = tickets.filter(t => {
+    const d = getTicketDate(t);
+    return d >= weekStartStr && d <= todayStr;
+  });
+  const weekOrders = orders.filter(o => {
+    const d = o.deliveryDate || (o.createdAt ? o.createdAt.split('T')[0] : todayStr);
+    return d >= weekStartStr && d <= todayStr;
+  });
+  const weekMostradorTotal = weekTickets.reduce((acc, t) => acc + t.total, 0);
+  const weekOrdersTotal = weekOrders.reduce((acc, o) => acc + o.total, 0);
+  const weekAccumulatedTotal = weekMostradorTotal + weekOrdersTotal;
+  const weekAccumulatedCash = weekTickets.filter(t => t.paymentMethod === 'efectivo').reduce((acc, t) => acc + t.total, 0) +
+    weekOrders.reduce((acc, o) => o.paymentMethod === 'efectivo' ? acc + o.total : acc, 0);
+  const weekAccumulatedCard = weekTickets.filter(t => t.paymentMethod === 'tarjeta').reduce((acc, t) => acc + t.total, 0) +
+    weekOrders.reduce((acc, o) => o.paymentMethod === 'tarjeta' ? acc + o.total : acc, 0);
+  const weekAccumulatedPieces = weekTickets.reduce((sum, t) => sum + t.items.reduce((s, it) => s + it.quantity, 0), 0) +
+    weekOrders.reduce((sum, o) => sum + o.items.reduce((s, it) => s + it.quantity, 0), 0);
+  const elapsedDaysWeek = Math.max(1, currentDayOfWeek === 0 ? 7 : currentDayOfWeek);
+  const weekDailyAvg = Math.round(weekAccumulatedTotal / elapsedDaysWeek);
+
+  // --- RESUMEN DE VENTAS ACUMULADAS POR MES (Día 1 al presente) ---
+  const monthTickets = tickets.filter(t => {
+    const d = getTicketDate(t);
+    return d >= monthStartStr && d <= todayStr;
+  });
+  const monthOrders = orders.filter(o => {
+    const d = o.deliveryDate || (o.createdAt ? o.createdAt.split('T')[0] : todayStr);
+    return d >= monthStartStr && d <= todayStr;
+  });
+  const monthMostradorTotal = monthTickets.reduce((acc, t) => acc + t.total, 0);
+  const monthOrdersTotal = monthOrders.reduce((acc, o) => acc + o.total, 0);
+  const monthAccumulatedTotal = monthMostradorTotal + monthOrdersTotal;
+  const monthAccumulatedCash = monthTickets.filter(t => t.paymentMethod === 'efectivo').reduce((acc, t) => acc + t.total, 0) +
+    monthOrders.reduce((acc, o) => o.paymentMethod === 'efectivo' ? acc + o.total : acc, 0);
+  const monthAccumulatedCard = monthTickets.filter(t => t.paymentMethod === 'tarjeta').reduce((acc, t) => acc + t.total, 0) +
+    monthOrders.reduce((acc, o) => o.paymentMethod === 'tarjeta' ? acc + o.total : acc, 0);
+  const monthAccumulatedPieces = monthTickets.reduce((sum, t) => sum + t.items.reduce((s, it) => s + it.quantity, 0), 0) +
+    monthOrders.reduce((sum, o) => sum + o.items.reduce((s, it) => s + it.quantity, 0), 0);
+  const elapsedDaysMonth = Math.max(1, now.getDate());
+  const monthDailyAvg = Math.round(monthAccumulatedTotal / elapsedDaysMonth);
 
   // --- FILTERS PER VIEW ---
   // Filtered tickets (Corte mostrador)
@@ -422,7 +485,7 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
       shiftCashier = 'Cajero Turno 1';
     } else if (shiftType === 'turno2') {
       targetTickets = turno2Tickets;
-      shiftTitle = 'Turno 2 (Tarde 15:00 a 22:00)';
+      shiftTitle = 'Turno 2 (Tarde 15:00 a 23:59 - Cierre 11:59 PM)';
       shiftCashier = 'Cajero Turno 2';
     }
 
@@ -767,6 +830,123 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
         </div>
       </div>
 
+      {/* 2.5 RESUMEN DE VENTAS ACUMULADAS POR SEMANA Y POR MES */}
+      <div className="bg-gradient-to-r from-slate-900 via-stone-900 to-amber-950 text-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-500/30 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center font-bold text-lg shadow-sm">
+              📈
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-black text-white">
+                  Resumen de Ventas Acumuladas
+                </h2>
+                <span className="bg-amber-400 text-stone-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Corte Real
+                </span>
+              </div>
+              <p className="text-xs text-amber-200/80 font-medium">
+                Corte de mostrador continuo hasta las 11:59 PM (sin reseteo prematuro a las 10:00 PM).
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-stone-300 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15">
+              Hoy Mostrador: <strong className="text-amber-300 font-mono">${mostradorTotal}.00</strong> ({filteredTickets.length} tickets)
+            </span>
+          </div>
+        </div>
+
+        {/* Dos Tarjetas Principales: SEMANA y MES */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* TARJETA SEMANA */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🗓️</span>
+                <div>
+                  <h3 className="font-black text-sm text-white">Ventas Acumuladas de la Semana</h3>
+                  <span className="text-[10px] text-amber-300 font-bold">Lunes {weekStartStr} a Hoy</span>
+                </div>
+              </div>
+              <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[11px] font-black px-2.5 py-0.5 rounded-lg">
+                {weekTickets.length + weekOrders.length} transacciones
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center pt-1">
+              <div className="bg-black/40 rounded-xl p-2.5 border border-white/10">
+                <div className="text-[10px] text-stone-400 uppercase font-black">Total Ventas</div>
+                <div className="text-lg sm:text-xl font-black text-amber-300 font-mono mt-0.5">
+                  ${weekAccumulatedTotal}.00
+                </div>
+              </div>
+              <div className="bg-black/40 rounded-xl p-2.5 border border-white/10">
+                <div className="text-[10px] text-emerald-400 uppercase font-black">Efectivo</div>
+                <div className="text-base sm:text-lg font-black text-emerald-300 font-mono mt-0.5">
+                  ${weekAccumulatedCash}.00
+                </div>
+              </div>
+              <div className="bg-black/40 rounded-xl p-2.5 border border-white/10">
+                <div className="text-[10px] text-sky-400 uppercase font-black">Tarjeta</div>
+                <div className="text-base sm:text-lg font-black text-sky-300 font-mono mt-0.5">
+                  ${weekAccumulatedCard}.00
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-stone-300 pt-1 font-bold border-t border-white/10">
+              <span>🍞 Pan elaborado: <strong className="text-white font-mono">{weekAccumulatedPieces} pzas</strong></span>
+              <span>⚡ Promedio diario: <strong className="text-amber-300 font-mono">${weekDailyAvg}.00 / día</strong></span>
+            </div>
+          </div>
+
+          {/* TARJETA MES */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📆</span>
+                <div>
+                  <h3 className="font-black text-sm text-white">Ventas Acumuladas del Mes</h3>
+                  <span className="text-[10px] text-emerald-300 font-bold">Día 1 ({monthStartStr}) a Hoy</span>
+                </div>
+              </div>
+              <span className="bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-black px-2.5 py-0.5 rounded-lg">
+                {monthTickets.length + monthOrders.length} transacciones
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center pt-1">
+              <div className="bg-black/40 rounded-xl p-2.5 border border-white/10">
+                <div className="text-[10px] text-stone-400 uppercase font-black">Total Ventas</div>
+                <div className="text-lg sm:text-xl font-black text-emerald-300 font-mono mt-0.5">
+                  ${monthAccumulatedTotal}.00
+                </div>
+              </div>
+              <div className="bg-black/40 rounded-xl p-2.5 border border-white/10">
+                <div className="text-[10px] text-emerald-400 uppercase font-black">Efectivo</div>
+                <div className="text-base sm:text-lg font-black text-emerald-300 font-mono mt-0.5">
+                  ${monthAccumulatedCash}.00
+                </div>
+              </div>
+              <div className="bg-black/40 rounded-xl p-2.5 border border-white/10">
+                <div className="text-[10px] text-sky-400 uppercase font-black">Tarjeta</div>
+                <div className="text-base sm:text-lg font-black text-sky-300 font-mono mt-0.5">
+                  ${monthAccumulatedCard}.00
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-stone-300 pt-1 font-bold border-t border-white/10">
+              <span>🍞 Pan elaborado: <strong className="text-white font-mono">{monthAccumulatedPieces} pzas</strong></span>
+              <span>⚡ Promedio diario: <strong className="text-emerald-300 font-mono">${monthDailyAvg}.00 / día</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 3. DATE & TIME PERIOD BAR */}
       <div className="bg-white rounded-2xl p-3 shadow-xs border border-slate-200 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
@@ -778,7 +958,7 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
               dateFilterMode === 'hoy' ? 'bg-[#D95D39] text-white shadow-xs' : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            Hoy
+            Hoy (Hasta 11:59 PM)
           </button>
           <button
             id="date-filter-ayer-btn"
@@ -798,7 +978,17 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
               dateFilterMode === 'semana' ? 'bg-[#D95D39] text-white shadow-xs' : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            Últimos 7 Días
+            Esta Semana
+          </button>
+          <button
+            id="date-filter-mes-btn"
+            type="button"
+            onClick={() => setDateFilterMode('mes')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+              dateFilterMode === 'mes' ? 'bg-[#D95D39] text-white shadow-xs' : 'text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            Este Mes
           </button>
           <button
             id="date-filter-personalizado-btn"
@@ -994,7 +1184,7 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
                         Turno 2 - Vespertino
                       </h3>
                       <span className="bg-indigo-200 text-indigo-950 font-black text-[10px] px-2 py-0.5 rounded-full border border-indigo-300">
-                        15:01 hrs - 22:10 hrs
+                        15:01 hrs - 23:59 hrs (11:59 PM)
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 font-bold">
@@ -1206,7 +1396,7 @@ export const SalesHistory: React.FC<SalesHistoryProps> = ({
                                 ? 'bg-amber-100 text-amber-900 border border-amber-300' 
                                 : 'bg-indigo-100 text-indigo-900 border border-indigo-300'
                             }`}>
-                              {shift === 'turno1' ? '🌅 T1 (06:50-15:00)' : '🌇 T2 (15:01-22:10)'}
+                              {shift === 'turno1' ? '🌅 T1 (06:50-15:00)' : '🌇 T2 (15:01-23:59)'}
                             </span>
                           </td>
                           <td className="py-3 px-4">

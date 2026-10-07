@@ -144,8 +144,8 @@ export const ProductionAnalytics: React.FC<ProductionAnalyticsProps> = ({ ticket
     return tickets;
   }, [tickets, periodFilter, todayStr, yesterdayStr, sevenDaysAgoStr, thirtyDaysAgoStr, customDateStart, customDateEnd]);
 
-  // Modo de simulación de 1 semana si hay pocos datos iniciales
-  const [showSimulation, setShowSimulation] = useState<boolean>(() => tickets.length < 5);
+  // Modo de simulación de 1 semana si hay pocos datos iniciales (por defecto apagado para ver NÚMEROS REALES)
+  const [showSimulation, setShowSimulation] = useState<boolean>(false);
 
   // Tickets activos para el análisis (reales o proyección de ejemplo)
   const activeTickets = useMemo(() => {
@@ -196,40 +196,77 @@ export const ProductionAnalytics: React.FC<ProductionAnalyticsProps> = ({ ticket
   }, [stats.dayOfWeekStats]);
 
   return (
-    <div className="space-y-5 pb-16 animate-in fade-in duration-200">
+    <div className="space-y-4 pb-16 animate-in fade-in duration-200">
       
-      {/* Top Banner: Título, Explicación y Filtros de Fecha */}
-      <div className="bg-gradient-to-r from-amber-800 via-amber-900 to-stone-900 text-white rounded-3xl p-5 sm:p-7 shadow-lg border border-amber-700/50">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-200 border border-amber-400/30 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-              <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span>Inteligencia de Producción & Horneado</span>
+      {/* Top Banner: Resumen Rápido con NÚMEROS REALES y sin muros de texto */}
+      <div className="bg-gradient-to-r from-amber-900 via-stone-900 to-amber-950 text-white rounded-3xl p-5 shadow-lg border border-amber-700/50 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-400/30 flex items-center justify-center text-2xl shrink-0 font-bold">
+              🥖
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
-              <span>Producción de Bolillo y Panadería</span>
-              <span className="text-xl">🥖📊</span>
-            </h1>
-            <p className="text-sm text-amber-100/90 leading-relaxed font-medium">
-              Analiza la venta por hora de tu producto ancla (<span className="text-amber-300 font-bold">Bolillo $5</span>) convertido a <span className="text-amber-300 font-bold">charolas</span>, estima la demanda semanal para saber qué días producir más o menos, y conoce el desglose exacto de pan tradicional y especialidades.
-            </p>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                <span>Estadísticas de Venta y Producción</span>
+                <span className="bg-emerald-500 text-stone-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Números Reales
+                </span>
+              </h1>
+              <p className="text-xs text-amber-200/80 font-bold mt-0.5">
+                Ventas registradas y cálculo exacto de charolas (12 pzas / charola estándar).
+              </p>
+            </div>
           </div>
 
-          {/* Capacidad Estándar Fija de Charola */}
-          <div className="bg-black/30 backdrop-blur-md rounded-2xl p-3.5 border border-amber-400/25 flex flex-col justify-center gap-1.5 shrink-0">
-            <div className="flex items-center justify-between gap-3 text-xs">
-              <span className="text-amber-200 font-bold flex items-center gap-1.5">
-                <span>🥖</span>
-                <span>Capacidad por Charola:</span>
-              </span>
-              <span className="bg-amber-400 text-stone-950 font-black text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-xs font-mono">
-                <Lock className="w-3 h-3 text-stone-900" />
-                <span>12 pzas / charola (Fijo)</span>
-              </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-black/40 text-amber-300 border border-amber-400/20 text-xs font-black px-3 py-1.5 rounded-xl font-mono">
+              🥖 12 pzas / charola fija
+            </span>
+          </div>
+        </div>
+
+        {/* 6 TARJETAS RÁPIDAS DE NÚMEROS REALES */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
+          <div className="bg-black/40 rounded-2xl p-3 border border-white/10 text-center">
+            <div className="text-[10px] uppercase font-black text-amber-300">Venta Total</div>
+            <div className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5">
+              ${stats.totalRevenue.toLocaleString()}
             </div>
-            <p className="text-[11px] text-amber-200/80 font-medium">
-              Estándar Panadería Santa Fé (12 bolillos por charola de horneado).
-            </p>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-3 border border-white/10 text-center">
+            <div className="text-[10px] uppercase font-black text-amber-400">Bolillo Vendido</div>
+            <div className="text-xl sm:text-2xl font-black text-amber-300 font-mono mt-0.5">
+              {stats.bolilloTotalPieces.toLocaleString()} <span className="text-xs font-bold text-amber-400">pz</span>
+            </div>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-3 border border-white/10 text-center">
+            <div className="text-[10px] uppercase font-black text-orange-400">Charolas Bolillo</div>
+            <div className="text-xl sm:text-2xl font-black text-orange-300 font-mono mt-0.5">
+              ~{stats.bolilloTotalTrays} <span className="text-xs font-bold text-orange-400">ch</span>
+            </div>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-3 border border-white/10 text-center">
+            <div className="text-[10px] uppercase font-black text-purple-400">Pan Dulce Total</div>
+            <div className="text-xl sm:text-2xl font-black text-purple-300 font-mono mt-0.5">
+              {Math.max(0, stats.totalPiecesSold - stats.bolilloTotalPieces).toLocaleString()} <span className="text-xs font-bold text-purple-400">pz</span>
+            </div>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-3 border border-white/10 text-center">
+            <div className="text-[10px] uppercase font-black text-sky-400">Tickets Reales</div>
+            <div className="text-xl sm:text-2xl font-black text-sky-300 font-mono mt-0.5">
+              {stats.totalTicketsAnalyzed}
+            </div>
+          </div>
+
+          <div className="bg-black/40 rounded-2xl p-3 border border-white/10 text-center">
+            <div className="text-[10px] uppercase font-black text-emerald-400">Ticket Promedio</div>
+            <div className="text-xl sm:text-2xl font-black text-emerald-300 font-mono mt-0.5">
+              ${stats.totalTicketsAnalyzed > 0 ? Math.round(stats.totalRevenue / stats.totalTicketsAnalyzed) : 0}
+            </div>
           </div>
         </div>
 

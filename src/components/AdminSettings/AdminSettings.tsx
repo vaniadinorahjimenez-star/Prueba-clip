@@ -1513,7 +1513,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               >
                 <Smartphone className="w-6 h-6 text-emerald-600 mb-1.5" />
                 <strong className="text-xs font-bold text-slate-900">Probar con RawBT</strong>
-                <span className="text-[10px] text-slate-500 mt-0.5">App de Android para tickets</span>
+                <span className="text-[10px] text-slate-500 mt-0.5">Controlador de tickets térmicos</span>
               </button>
             </div>
           </div>

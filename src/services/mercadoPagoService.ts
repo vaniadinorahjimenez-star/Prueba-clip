@@ -290,7 +290,7 @@ export async function pollMercadoPagoPaymentStatus(
   paymentIntentId: string,
   onStatusUpdate: (statusText: string) => void,
   signal?: AbortSignal,
-  maxAttempts: number = 36 // 36 * 2.5s = ~90 segundos
+  maxAttempts: number = 60 // 60 * 1.5s = ~90 segundos
 ): Promise<MercadoPagoPaymentResult> {
   const config = getStoredMercadoPagoConfig();
   const token = config.accessToken || DEFAULT_MP_ACCESS_TOKEN;
@@ -306,48 +306,125 @@ export async function pollMercadoPagoPaymentStatus(
     }
 
     attempts++;
-    onStatusUpdate(`Esperando tarjeta o NIP en terminal Point... (${attempts}/${maxAttempts})`);
 
     try {
-      // 1. Consultar vía proxy
+      // 1. Consultar vía proxy seguro (soporta POST y GET)
       let data: any = null;
       try {
-        const proxyRes = await fetch(`/.netlify/functions/mercadopago-point?action=get_status&payment_intent_id=${paymentIntentId}&access_token=${encodeURIComponent(token)}`);
+        const proxyRes = await fetch('/.netlify/functions/mercadopago-point', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_status',
+            payment_intent_id: paymentIntentId,
+            access_token: token
+          })
+        });
         if (proxyRes.ok) {
           data = await proxyRes.json();
         }
       } catch {}
 
-      // 2. Si no hubo proxy, consulta directa
+      // 1.1 Si falló POST, intentar GET con query params
       if (!data) {
-        const res = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          data = await res.json();
-        }
+        try {
+          const getRes = await fetch(`/.netlify/functions/mercadopago-point?action=get_status&payment_intent_id=${paymentIntentId}&access_token=${encodeURIComponent(token)}`);
+          if (getRes.ok) {
+            const parsed = await getRes.json().catch(() => null);
+            if (parsed && !parsed.error) data = parsed;
+          }
+        } catch {}
+      }
+
+      // 1.2 Verificación cruzada con events cada 3 intentos
+      if (!data && attempts % 3 === 0) {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const evRes = await fetch(`/.netlify/functions/mercadopago-point?action=get_events&startDate=${today}&endDate=${today}&access_token=${encodeURIComponent(token)}`);
+          if (evRes.ok) {
+            const evData = await evRes.json().catch(() => null);
+            const foundEvent = (evData?.events || []).find((ev: any) => ev.payment_intent_id === paymentIntentId);
+            if (foundEvent) {
+              data = {
+                id: foundEvent.payment_intent_id,
+                state: foundEvent.status,
+                status: foundEvent.status
+              };
+            }
+          }
+        } catch {}
+      }
+
+      // 2. Si no hubo proxy local, consulta directa a la API oficial (para entornos nativos)
+      if (!data) {
+        try {
+          const res = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/${paymentIntentId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            data = await res.json().catch(() => null);
+          }
+        } catch {}
       }
 
       if (data) {
-        const intentStatus = (data.status || '').toUpperCase();
+        // En Mercado Pago Point, el estado se devuelve principalmente en el campo "state" (ej: 'FINISHED', 'OPEN', 'CANCELED', 'ABANDONED')
+        // y a veces en "status".
+        const rawState = String(data.state || data.status || '').toUpperCase();
 
-        if (intentStatus === 'PROCESSED') {
-          // Cobro aprobado exitosamente
+        // 1. ESTADO APROBADO / FINALIZADO
+        // 'FINISHED' es el estado oficial devuelto por Point cuando el cliente pasa la tarjeta y se aprueba
+        if (
+          rawState === 'FINISHED' ||
+          rawState === 'PROCESSED' ||
+          rawState === 'APPROVED' ||
+          rawState === 'SUCCESS' ||
+          Boolean(data.payment && data.payment.id)
+        ) {
           const p = data.payment || {};
-          const authCode = p.authorization_code || p.id ? String(p.id) : `MP-${Math.floor(100000 + Math.random() * 900000)}`;
+          let authCode = p.authorization_code || (p.id ? `MP-${String(p.id).slice(-6)}` : `APROBADO`);
+          let last4 = p.last_four_digits || p.last4 || '';
+
+          // Intentar obtener authorization_code y last_four_digits reales de /v1/payments/{id}
+          if (p.id) {
+            try {
+              let pData: any = null;
+              try {
+                const proxyP = await fetch(`/.netlify/functions/mercadopago-point?action=get_payment&payment_id=${p.id}&access_token=${encodeURIComponent(token)}`);
+                if (proxyP.ok) pData = await proxyP.json();
+              } catch {}
+
+              if (!pData) {
+                const dirP = await fetch(`https://api.mercadopago.com/v1/payments/${p.id}`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (dirP.ok) pData = await dirP.json();
+              }
+
+              if (pData) {
+                if (pData.authorization_code) authCode = String(pData.authorization_code);
+                if (pData.card?.last_four_digits) last4 = String(pData.card.last_four_digits);
+              }
+            } catch (pErr) {
+              console.warn('Detalle extendido de tarjeta omitido:', pErr);
+            }
+          }
+
+          onStatusUpdate('¡Pago Aprobado en la terminal! Registrando venta...');
           return {
             success: true,
             paymentIntentId,
             paymentId: p.id ? String(p.id) : undefined,
             authCode,
-            last4: p.last_four_digits,
-            amount: data.amount ? data.amount / 100 : undefined,
+            last4,
+            amount: data.amount ? (data.amount > 1000 ? data.amount / 100 : data.amount) : undefined,
             status: 'approved',
             message: '¡Pago Aprobado con éxito en Mercado Pago Point!'
           };
         }
 
-        if (intentStatus === 'CANCELED' || intentStatus === 'CANCELLED') {
+        // 2. CANCELADO
+        if (rawState === 'CANCELED' || rawState === 'CANCELLED') {
           return {
             success: false,
             errorType: 'CANCELLED',
@@ -355,20 +432,39 @@ export async function pollMercadoPagoPaymentStatus(
           };
         }
 
-        if (intentStatus === 'ABANDONED') {
+        // 3. ABANDONADO / TIMEOUT
+        if (rawState === 'ABANDONED') {
           return {
             success: false,
             errorType: 'TIMEOUT',
             message: 'Tiempo de espera agotado en la terminal Point.'
           };
         }
+
+        // 4. RECHAZADO / ERROR
+        if (rawState === 'REJECTED' || rawState === 'FAILED' || rawState === 'ERROR') {
+          return {
+            success: false,
+            errorType: 'REJECTED',
+            message: 'Tarjeta declinada o rechazada en la terminal Point.'
+          };
+        }
+
+        // 5. EN ESPERA / PROCESANDO
+        if (rawState === 'PROCESSING' || rawState === 'ON_TERMINAL') {
+          onStatusUpdate('Leyendo tarjeta y procesando NIP en la terminal Point Smart...');
+        } else {
+          onStatusUpdate(`Esperando tarjeta o NIP en terminal Point Smart... (${attempts}/${maxAttempts})`);
+        }
+      } else {
+        onStatusUpdate(`Conectando con terminal Point Smart... (${attempts}/${maxAttempts})`);
       }
     } catch (e) {
       console.warn('Error en sondeo de estado Point:', e);
     }
 
-    // Esperar 2.5 segundos antes del siguiente intento
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    // Esperar 1.5 segundos antes del siguiente intento para detección ultra-rápida
+    await new Promise(resolve => setTimeout(resolve, 1500));
   }
 
   return {

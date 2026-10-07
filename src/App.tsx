@@ -48,6 +48,7 @@ import { DeliveryDashboard } from './components/Delivery/DeliveryDashboard';
 import { LoyaltyManager } from './components/Loyalty/LoyaltyManager';
 import { SalesHistory } from './components/SalesHistory/SalesHistory';
 import { ProductionAnalytics } from './components/Analytics/ProductionAnalytics';
+import { RecipeBookView } from './components/Recipes/RecipeBookView';
 import { AdminSettings } from './components/AdminSettings/AdminSettings';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { 
@@ -382,6 +383,10 @@ export default function App() {
           <ProductionAnalytics
             tickets={tickets}
           />
+        )}
+
+        {activeTab === 'recipes' && (
+          <RecipeBookView />
         )}
 
         {activeTab === 'history' && (

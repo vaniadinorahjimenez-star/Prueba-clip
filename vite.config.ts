@@ -405,11 +405,13 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
             });
             return;
           }
+          return;
+        }
 
-          // -------------------------------------------------------------------
-          // PROXY MERCADO PAGO POINT (Credenciales Oficiales)
-          // -------------------------------------------------------------------
-          if (req.url && req.url.startsWith('/.netlify/functions/mercadopago-point')) {
+        // -------------------------------------------------------------------
+        // PROXY MERCADO PAGO POINT (Credenciales Oficiales)
+        // -------------------------------------------------------------------
+        if (req.url && (req.url.startsWith('/.netlify/functions/mercadopago-point') || req.url.startsWith('/api/mercadopago-point'))) {
             const headers = {
               'Content-Type': 'application/json; charset=utf-8',
               'Access-Control-Allow-Origin': '*',
@@ -421,14 +423,14 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
               return res.end();
             }
 
-            let bodyStr = '';
-            req.on('data', chunk => { bodyStr += chunk; });
-            req.on('end', async () => {
+            const processMpRequest = async (bodyString: string) => {
               try {
                 let payload: any = {};
-                try { payload = JSON.parse(bodyStr); } catch {}
-                const urlObj = new URL(req.url, 'http://localhost');
-                const action = payload.action || urlObj.searchParams.get('action') || 'create_payment_intent';
+                if (bodyString) {
+                  try { payload = JSON.parse(bodyString); } catch {}
+                }
+                const urlObj = new URL(req.url!, 'http://localhost');
+                const action = payload.action || urlObj.searchParams.get('action') || 'get_status';
                 const token = payload.access_token || urlObj.searchParams.get('access_token') || 'APP_USR-1851444305390229-100618-87c98c73cf6f06ebc4d3108482bb5e53-264153036';
                 const authHeader = `Bearer ${token.trim()}`;
 
@@ -473,7 +475,32 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
 
                 if (action === 'get_status') {
                   const intentId = payload.payment_intent_id || urlObj.searchParams.get('payment_intent_id');
+                  if (!intentId) {
+                    res.writeHead(400, headers);
+                    return res.end(JSON.stringify({ error: 'MISSING_PAYMENT_INTENT_ID' }));
+                  }
                   const mpRes = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`, {
+                    headers: { 'Authorization': authHeader }
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                if (action === 'get_payment') {
+                  const paymentId = payload.payment_id || urlObj.searchParams.get('payment_id');
+                  const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+                    headers: { 'Authorization': authHeader }
+                  });
+                  const mpData = await mpRes.json().catch(() => ({}));
+                  res.writeHead(mpRes.status, headers);
+                  return res.end(JSON.stringify(mpData));
+                }
+
+                if (action === 'get_events') {
+                  const startDate = urlObj.searchParams.get('startDate') || new Date().toISOString().split('T')[0];
+                  const endDate = urlObj.searchParams.get('endDate') || startDate;
+                  const mpRes = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/events?startDate=${startDate}&endDate=${endDate}`, {
                     headers: { 'Authorization': authHeader }
                   });
                   const mpData = await mpRes.json().catch(() => ({}));
@@ -499,10 +526,17 @@ function clipNetlifyFunctionDevPlugin(): Plugin {
                 res.writeHead(500, headers);
                 return res.end(JSON.stringify({ error: e.message }));
               }
-            });
+            };
+
+            if (req.method === 'GET' || req.method === 'HEAD') {
+              processMpRequest('');
+            } else {
+              let bodyStr = '';
+              req.on('data', chunk => { bodyStr += chunk; });
+              req.on('end', () => processMpRequest(bodyStr));
+            }
             return;
           }
-        }
         next();
       });
     }

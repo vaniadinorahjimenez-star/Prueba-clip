@@ -160,6 +160,59 @@ exports.handler = async function (event) {
     }
   }
 
+  // ACCIÓN: OBTENER DETALLE DEL PAGO (AUTHORIZATION CODE, LAST 4)
+  if (action === 'get_payment') {
+    const paymentId = payload.payment_id || event.queryStringParameters?.payment_id;
+    if (!paymentId) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: 'MISSING_PAYMENT_ID' })
+      };
+    }
+
+    try {
+      const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: { 'Authorization': authHeader }
+      });
+      const data = await res.json().catch(() => ({}));
+      return {
+        statusCode: res.status,
+        headers: CORS_HEADERS,
+        body: JSON.stringify(data)
+      };
+    } catch (err) {
+      return {
+        statusCode: 500,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: err.message })
+      };
+    }
+  }
+
+  // ACCIÓN: OBTENER EVENTOS DE INTENTS
+  if (action === 'get_events') {
+    const startDate = event.queryStringParameters?.startDate || payload.startDate || new Date().toISOString().split('T')[0];
+    const endDate = event.queryStringParameters?.endDate || payload.endDate || startDate;
+    try {
+      const res = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/events?startDate=${startDate}&endDate=${endDate}`, {
+        headers: { 'Authorization': authHeader }
+      });
+      const data = await res.json().catch(() => ({}));
+      return {
+        statusCode: res.status,
+        headers: CORS_HEADERS,
+        body: JSON.stringify(data)
+      };
+    } catch (err) {
+      return {
+        statusCode: 500,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: err.message })
+      };
+    }
+  }
+
   // 5. ACCIÓN: CANCELAR ORDEN DE COBRO
   if (action === 'cancel_payment_intent') {
     const deviceId = payload.device_id || DEFAULT_DEVICE_ID;

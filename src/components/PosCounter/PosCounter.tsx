@@ -3047,7 +3047,7 @@ export const PosCounter: React.FC<PosCounterProps> = ({
                 {settings.slogan || 'Pan calientito y tradicional.'}
               </div>
               <div className="text-[10.5px] font-black text-black leading-tight mt-0.5">
-                {settings.address || '7:00 am a 10:00 pm'}
+                {settings.address || '7:00 am a 11:59 pm'}
               </div>
               <div className="text-[11px] font-black text-black leading-tight">
                 {settings.phone || '442 816 3291'}

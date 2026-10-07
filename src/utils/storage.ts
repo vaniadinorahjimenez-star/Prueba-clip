@@ -251,13 +251,14 @@ export function parseTimeToMinutes(timeStr: string): number {
 
 // Determina el turno por horario estándar:
 // Turno 1: 06:50 AM (410 mins) a 15:00 HRS (900 mins)
-// Turno 2: 15:01 HRS (901 mins) a 22:10 HRS (1330 mins)
+// Turno 2: 15:01 HRS (901 mins) a 23:59 HRS (1439 mins - hasta las 11:59 PM de mostrador)
 export function getTicketShiftByTime(timeStr: string): 'turno1' | 'turno2' {
   const mins = parseTimeToMinutes(timeStr);
   if (mins >= 410 && mins <= 900) {
     return 'turno1';
   }
-  if (mins > 900 && mins <= 1330) {
+  // Desde 15:01 hrs hasta las 23:59 hrs (11:59 PM)
+  if (mins > 900 && mins <= 1440) {
     return 'turno2';
   }
   if (mins < 410) {

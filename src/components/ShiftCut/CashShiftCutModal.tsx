@@ -92,9 +92,9 @@ export const CashShiftCutModal: React.FC<CashShiftCutModalProps> = ({
   const [shiftType, setShiftType] = useState<string>(() => {
     const active = localStorage.getItem('santafe_active_shift');
     if (active === 'turno1') return 'Turno 1 (Mañana 07:00 a 15:00)';
-    if (active === 'turno2') return 'Turno 2 (Tarde 15:00 a 22:00)';
+    if (active === 'turno2') return 'Turno 2 (Tarde 15:00 a 23:59)';
     const hour = new Date().getHours();
-    return hour < 15 ? 'Turno 1 (Mañana 07:00 a 15:00)' : 'Turno 2 (Tarde 15:00 a 22:00)';
+    return hour < 15 ? 'Turno 1 (Mañana 07:00 a 15:00)' : 'Turno 2 (Tarde 15:00 a 23:59)';
   });
 
   // Initial Drawer Cash (Fondo inicial de caja) - Default 1000 editable con persistencia
@@ -589,7 +589,7 @@ export const CashShiftCutModal: React.FC<CashShiftCutModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => setShiftType('Turno 2 (Tarde 15:00 a 22:00)')}
+                      onClick={() => setShiftType('Turno 2 (Tarde 15:00 a 23:59)')}
                       className={`p-2 rounded-xl text-left transition-all cursor-pointer border-2 flex flex-col justify-between ${
                         shiftType.includes('Turno 2')
                           ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs ring-2 ring-indigo-400/50'
@@ -630,7 +630,7 @@ export const CashShiftCutModal: React.FC<CashShiftCutModalProps> = ({
                     className="w-full bg-white px-3 py-1.5 rounded-xl font-bold text-xs text-slate-900 border border-amber-300 focus:outline-none focus:ring-2 focus:ring-[#D95D39] shadow-2xs cursor-pointer"
                   >
                     <option value="Turno 1 (Mañana 07:00 a 15:00)">🌅 Turno 1 (Mañana 07:00 a 15:00)</option>
-                    <option value="Turno 2 (Tarde 15:00 a 22:00)">🌇 Turno 2 (Tarde 15:00 a 22:00)</option>
+                    <option value="Turno 2 (Tarde 15:00 a 23:59)">🌇 Turno 2 (Tarde 15:00 a 23:59 - Cierre 11:59 PM)</option>
                     <option value="Turno Completo">🗓️ Turno Completo (Día)</option>
                   </select>
                 </div>
